@@ -1,0 +1,31 @@
+<?php
+/**
+ * @file
+ */
+
+/**
+ * Implements hook_install().
+ */
+function christmas_snow_install() {
+}
+
+/**
+ * IImplements hook_uninstall().
+ */
+function christmas_snow_uninstall() {
+  variable_del('christmas_snow_settings');
+  variable_del('christmas_snow_flakes_max');
+  variable_del('christmas_snow_animation_int');
+  variable_del('christmas_snow_flake_bottom');
+  variable_del('christmas_snow_follow_mouse');
+  variable_del('christmas_snow_target_element');
+  variable_del('christmas_snow_color');
+  variable_del('christmas_snow_character');
+  variable_del('christmas_snow_stick');
+  variable_del('christmas_snow_melt');
+  variable_del('christmas_snow_position_fixed');
+  variable_del('christmas_snow_twinkle');
+  variable_del('christmas_snow_vmaxx');
+  variable_del('christmas_snow_vmaxy');
+}
+

@@ -1,0 +1,72 @@
+<?php
+
+/*
+ * Drupal Module: Christmas Snow
+ * Adds Christmas Snow to your site
+ *
+ * @author: introfini <www.josefernandes.pt>
+ */
+
+function christmas_snow_help($path, $arg) {
+  switch ($path) {
+    case 'admin/modules#description':
+      return t('Add Christmas Snow to your site.');
+    case 'admin/config/content/christmas_snow':
+      return t('Add Christmas Snow to your site.');
+  }
+}
+
+/*
+ * Initialize the snow!
+ */
+function christmas_snow_init() {
+  $path = drupal_get_path('module', 'christmas_snow');
+  $js = drupal_add_js($path . '/snowstorm.js');
+  _christmas_snow_settings();
+}
+
+/*
+ * Apply settings for the snow fall.
+ *
+ * This is what actually puts the settings for the snow onto the page. It finds
+ * the settings and then compiles them into javascript settings that the
+ * snowStorm.js file understands
+ *
+ */
+function _christmas_snow_settings() {
+
+  $snowStorm = "snowStorm.flakesMaxActive = " . variable_get('christmas_snow_flakes_max', 96) . ";\n";
+  $snowStorm .= "snowStorm.animationInterval = " . variable_get('christmas_snow_animation_int', 33) . ";\n";
+  $snowStorm .= "snowStorm.flakeBottom = " . variable_get('christmas_snow_flake_bottom', "null") . ";\n";
+  $snowStorm .= "snowStorm.followMouse = " . variable_get('christmas_snow_follow_mouse', "'true'") . ";\n";
+  $snowStorm .= "snowStorm.targetElement = " . variable_get('christmas_snow_target_element', "null") . ";\n";
+  $snowStorm .= "snowStorm.snowColor = " . variable_get('christmas_snow_color', "'#fff'") . ";\n";
+  $snowStorm .= "snowStorm.snowCharacter = " . variable_get('christmas_snow_character', "'•'") . ";\n";
+  $snowStorm .= "snowStorm.snowStick = " . variable_get('christmas_snow_stick', "'true'") . ";\n";
+  $snowStorm .= "snowStorm.useMeltEffect = " . variable_get('christmas_snow_melt', "'true'") . ";\n";
+  $snowStorm .= "snowStorm.usePositionFixed = " . variable_get('christmas_snow_position_fixed', "'false'") . ";\n";
+  $snowStorm .= "snowStorm.useTwinkleEffect = " . variable_get('christmas_snow_twinkle', "'false'") . ";\n";
+  $snowStorm .= "snowStorm.vMaxX = " . variable_get('christmas_snow_vmaxx', 8) . ";\n";
+  $snowStorm .= "snowStorm.vMaxY = " . variable_get('christmas_snow_vmaxy', 5) . ";\n";
+
+  $js = drupal_add_js($snowStorm, 'inline');
+}
+
+/*
+ * provides the administration menu item for making settings changes
+ *
+ */
+function christmas_snow_menu() {
+  $items['admin/config/content/christmas_snow'] = array(
+    'title' => 'Christmas Snow Settings',
+    'description' => 'Adjust the settings of the snow storm',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('christmas_snow_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'christmas_snow.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
