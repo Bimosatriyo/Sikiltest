@@ -2,7 +2,6 @@
 
 /**
  * @file
- * Turn Drupal to a RESTful server, following best practices.
  */
 
 include_once __DIR__ . '/restful.entity.inc';
@@ -30,14 +29,10 @@ function restful_menu() {
     ->getPlugins();
   foreach ($plugins->getIterator() as $plugin) {
     if (!$plugin instanceof ResourceInterface) {
-      // If the plugin is disabled $plugin gets set to NULL. If that is the case
-      // do not set any menu values based on it.
       continue;
     }
     $plugin_definition = $plugin->getPluginDefinition();
     if (!$plugin_definition['hookMenu']) {
-      // Plugin explicitly declared no hook menu should be created automatically
-      // for it.
       continue;
     }
     $item = array(
@@ -49,36 +44,27 @@ function restful_menu() {
       'delivery callback' => 'restful_delivery',
       'type' => MENU_CALLBACK,
     );
-    // If there is no specific menu item allow the different version variations.
-    if (!isset($plugin_definition['menuItem'])) {
-      // Add the version string to the arguments.
+     if (!isset($plugin_definition['menuItem'])) {
       $item['access arguments'][] = 1;
       $item['page arguments'][] = 1;
-      // Ex: api/v1.2/articles
       $items[$base_path . '/v' . $plugin_definition['majorVersion'] . '.' . $plugin_definition['minorVersion'] . '/' . $plugin_definition['resource']] = $item;
-      // Ex: api/v1/articles will use the latest minor version.
       $items[$base_path . '/v' . $plugin_definition['majorVersion'] . '/' . $plugin_definition['resource']] = $item;
-      // Ex: api/articles will use the header or the latest version.
-      // Do not add the version string to the arguments.
       $item['access arguments'] = $item['page arguments'] = array(1);
       $items[$base_path . '/' . $plugin_definition['resource']] = $item;
     }
     else {
       $path = implode('/', array($base_path, $plugin_definition['menuItem']));
 
-      // Remove trailing slashes that can lead to 404 errors.
       $path = rtrim($path, '/');
 
       $items[$path] = $item;
     }
   }
 
-  // Make sure the Login endpoint has the correct access callback.
   if (!empty($items[$base_path . '/login'])) {
     $items[$base_path . '/login']['access callback'] = 'user_is_anonymous';
   }
 
-  // Add administration page.
   $items['admin/config/services/restful'] = array(
     'title' => 'RESTful',
     'description' => 'Administer the RESTful module.',
@@ -89,7 +75,6 @@ function restful_menu() {
   );
   $items['admin/config/services/restful/restful'] = $items['admin/config/services/restful'];
   $items['admin/config/services/restful/restful']['type'] = MENU_DEFAULT_LOCAL_TASK;
-  // Add cache administration page.
   $items['admin/config/services/restful/cache'] = array(
     'title' => 'Cache',
     'description' => 'Administer the RESTful module cache system.',
@@ -145,13 +130,6 @@ function restful_help($path, $arg) {
 
 /**
  * Get the RestfulManager.
- *
- * Calling restful() from anywhere in the code will give you access to the
- * RestfulManager. That in turn will provide you access to all the elements
- * involved.
- *
- * @return RestfulManager
- *   The manager.
  */
 function restful() {
   static $manager;
@@ -163,15 +141,6 @@ function restful() {
 
 /**
  * Access callback; Determine access for an API call.
- *
- * @param string $resource_name
- *   The name of the resource (e.g. "articles").
- *
- * @param string $version_string
- *   The version array.
- *
- * @return bool
- *   TRUE if user is allowed to access resource.
  */
 function restful_menu_access_callback($resource_name, $version_string = NULL) {
   $resource_manager = restful()->getResourceManager();
@@ -179,13 +148,10 @@ function restful_menu_access_callback($resource_name, $version_string = NULL) {
     $version_string = substr($version_string, 1);
     $parsed_versions = explode('.', $version_string);
     if (count($parsed_versions) == 2) {
-      // If there is only the major we need to get the version from the request,
-      // to get the latest version within the major version.
       $versions = $parsed_versions;
     }
   }
   if (empty($versions) && !$versions = $resource_manager->getVersionFromRequest()) {
-    // No version could be found.
     return FALSE;
   }
 
@@ -193,14 +159,11 @@ function restful_menu_access_callback($resource_name, $version_string = NULL) {
     $instance_id = $resource_name . PluginBase::DERIVATIVE_SEPARATOR . implode('.', $versions);
     $resource = $resource_manager->getPlugin($instance_id, restful()->getRequest());
     if (!$resource) {
-      // Throw a PluginNotFoundException exception instead of a denied access.
       throw new PluginNotFoundException($instance_id);
     }
     return $resource->access();
   }
   catch (RestfulException $e) {
-    // We can get here if the request method is not valid or if no resource can
-    // be negotiated.
     $response = restful()->getResponse();
     $output = _restful_build_http_api_error($e, $response);
     $response->setStatusCode($e->getCode());
@@ -216,18 +179,6 @@ function restful_menu_access_callback($resource_name, $version_string = NULL) {
 
 /**
  * Page callback; Return the response for an API call.
- *
- * @param string $resource_name
- *   The name of the resource (e.g. "articles").
- * @param string $version
- *   The version, prefixed with v (e.g. v1, v2.2).
- *
- * @throws \Drupal\restful\Exception\ServiceUnavailableException
- *
- * @return string
- *   JSON output with the result of the API call.
- *
- * @see http://tools.ietf.org/html/draft-nottingham-http-problem-06
  */
 function restful_menu_process_callback($resource_name, $version = NULL) {
   $path = func_get_args();
@@ -249,7 +200,6 @@ function restful_menu_process_callback($resource_name, $version = NULL) {
   $version_string = 'v' . $version_array['major'] . '.' . $version_array['minor'];
   $response_headers->add(HttpHeader::create('X-API-Version', $version_string));
 
-  // Vary the response with the presence of the X-API-Version or Accept headers.
   $vary = $request
     ->getHeaders()
     ->get('Vary')
@@ -265,7 +215,6 @@ function restful_menu_process_callback($resource_name, $version = NULL) {
     $response_headers->append(HttpHeader::create('Vary', implode(',', $additional_variations)));
   }
 
-  // Always add the allow origin if configured.
   $plugin_definition = $resource->getPluginDefinition();
   if (!empty($plugin_definition['allowOrigin'])) {
     $response_headers->append(HttpHeader::create('Access-Control-Allow-Origin', $plugin_definition['allowOrigin']));
@@ -286,21 +235,12 @@ function restful_menu_process_callback($resource_name, $version = NULL) {
     );
   }
 
-  // If the user was switched during the execution thread, then switch it back.
   $resource->switchUserBack();
   return $result;
 }
 
 /**
  * Returns data in JSON format.
- *
- * We do not use drupal_json_output(), in order to maintain the "Content-Type"
- * header.
- *
- * @param mixed $var
- *   (optional) If set, the variable will be converted to JSON and output.
- *
- * @see restful_menu_process_callback()
  */
 function restful_delivery($var = NULL) {
   if (!isset($var)) {
@@ -319,9 +259,7 @@ function restful_delivery($var = NULL) {
     }
 
     try {
-      // Adhere to the API Problem draft proposal.
       $formatter_id = variable_get('restful_default_output_formatter', 'json');
-      // Get the data in the default output format.
       $data = restful()
         ->getFormatterManager()
         ->negotiateFormatter(NULL, $formatter_id)
@@ -332,7 +270,6 @@ function restful_delivery($var = NULL) {
       $response->send();
     }
     catch (RestfulException $e) {
-      // If there is an exception during delivery, just JSON encode this.
       $output = _restful_build_http_api_error($e, $response);
       $response->setStatusCode($e->getCode());
       $response->setContent(drupal_json_encode($output));
@@ -343,18 +280,14 @@ function restful_delivery($var = NULL) {
   }
 
   try {
-    // Get the formatter for the current resource.
     $resource = restful()
       ->getResourceManager()
       ->negotiate();
-    // Get a new formatter manager.
     $formatter_manager = restful()
       ->getFormatterManager();
     $formatter_manager->setResource($resource);
     $plugin_definition = $resource->getPluginDefinition();
     if ($request->getMethod() == RequestInterface::METHOD_OPTIONS) {
-      // There is no guarantee that other formatters can process the
-      // auto-discovery output correctly.
       $formatter_name = 'json';
     }
     else {
@@ -364,7 +297,6 @@ function restful_delivery($var = NULL) {
     $response->setContent($output);
   }
   catch (RestfulException $e) {
-    // Handle if the formatter does not exist.
     $output = _restful_build_http_api_error($e, $response);
     $response->setStatusCode($e->getCode());
     $response->setContent(drupal_json_encode($output));
@@ -377,10 +309,7 @@ function restful_delivery($var = NULL) {
 }
 
 /**
- * Convert a menu status response to a valid JSON.
- *
  * @param int $var
- *   The integer value of the menu status, passed by reference.
  */
 function _restful_get_data_from_menu_status(&$var) {
   switch ($var) {
@@ -408,19 +337,12 @@ function _restful_get_data_from_menu_status(&$var) {
 }
 
 /**
- * Helper function to build the structured array for the error output.
- *
  * @param RestfulException $exception
- *   The exception.
  * @param ResponseInterface $response
- *   The response object to alter.
- *
  * @return array
- *   The structured output.
  */
 function _restful_build_http_api_error(RestfulException $exception, ResponseInterface $response = NULL) {
   $response = $response ?: restful()->getResponse();
-  // Adhere to the API Problem draft proposal.
   $exception->setHeader('Content-Type', 'application/problem+json; charset=utf-8');
   $result = array(
     'type' => $exception->getType(),
@@ -443,11 +365,7 @@ function _restful_build_http_api_error(RestfulException $exception, ResponseInte
   }
   drupal_page_is_cacheable(FALSE);
 
-  // Add a log entry with the error / warning.
   if ($exception->getCode() < 500) {
-    // Even though it's an exception, it's in fact not a server error - it
-    // might be just access denied, or a bad request, so we just want to log
-    // it, but without marking it as an actual exception.
     watchdog('restful', $exception->getMessage());
   }
   else {
@@ -458,10 +376,6 @@ function _restful_build_http_api_error(RestfulException $exception, ResponseInte
 
 /**
  * Implements hook_page_delivery_callback_alter().
- *
- * Hijack api/* to be under RESTful. We make sure that any call to api/* pages
- * that isn't valid, will still return with a well formatted error, instead of
- * a 404 HTML page.
  */
 function restful_page_delivery_callback_alter(&$callback) {
   if (!variable_get('restful_hijack_api_pages', TRUE)) {
@@ -471,12 +385,10 @@ function restful_page_delivery_callback_alter(&$callback) {
   $base_path = variable_get('restful_hook_menu_base_path', 'api');
 
   if (strpos($_GET['q'], $base_path . '/') !== 0 && $_GET['q'] != $base_path) {
-    // Page doesn't start with the base path (e.g. "api" or "api/").
     return;
   }
 
   if (menu_get_item()) {
-    // Path is valid (i.e. not 404).
     return;
   }
 
@@ -522,20 +434,12 @@ function restful_date_time_format_element_validate($element, &$form_state) {
 
 /**
  * Implements hook_restful_resource_alter().
- *
- * Decorate an existing resource with other services (e.g. rate limit and render
- * cache).
  */
 function restful_restful_resource_alter(ResourceInterface &$resource) {
-  // Disable any plugin in the disabled plugins variable.
   $disabled_plugins = array(
-    // Disable the Files Upload resource based on the settings variable.
     'files_upload:1.0' => (bool) !variable_get('restful_file_upload', FALSE),
-    // Disable the Users resources based on the settings variable.
     'users:1.0' => (bool) !variable_get('restful_enable_users_resource', TRUE),
-    // Disable the Login Cookie resources based on the settings variable.
     'login_cookie:1.0' => (bool) !variable_get('restful_enable_user_login_resource', TRUE),
-    // Disable the Discovery resource based on the settings variable.
     'discovery:1.0' => (bool) !variable_get('restful_enable_discovery_resource', TRUE),
   ) + variable_get('restful_disabled_plugins', array());
   if (!empty($disabled_plugins[$resource->getResourceName()])) {
@@ -551,21 +455,16 @@ function restful_restful_resource_alter(ResourceInterface &$resource) {
 
   $plugin_definition = $resource->getPluginDefinition();
 
-  // If render cache is enabled for the current resource, or there is no render
-  // cache information for the resource but render cache is enabled globally,
-  // then decorate the resource with cache capabilities.
   if (
     !empty($plugin_definition['renderCache']['render']) ||
     (!isset($plugin_definition['renderCache']['render']) && variable_get('restful_render_cache', FALSE))
   ) {
     $resource = new CacheDecoratedResource($resource);
   }
-  // Check for the rate limit configuration.
   if (!empty($plugin_definition['rateLimit']) || variable_get('restful_global_rate_limit', 0)) {
     $resource = new RateLimitDecoratedResource($resource);
   }
 
-  // Disable the discovery endpoint if it's disabled.
   if (
     $resource->getResourceMachineName() == 'discovery' &&
     !variable_get('restful_enable_discovery_resource', TRUE) &&

@@ -2,41 +2,19 @@
 
 /**
  * @file
- * This file contains no working PHP code; it exists to provide additional
- * documentation for doxygen as well as to document hooks in the standard
- * Drupal manner.
  */
 
 
 /**
  * @defgroup restws RestWS module integrations.
- *
- * Module integrations with the restws module.
  */
 
 /**
  * @defgroup restws_hooks RestWS' hooks
- * @{
- * Hooks that can be implemented by other modules in order to extend restws.
  */
 
 /**
- * Define restws compatible resources.
- *
- * This hook is required in order to add new restws resources.
- *
  * @return array
- *   An array of information about the module's provided resources.
- *   The array contains a sub-array for each resource, with the resource name as
- *   the key. Resource names may only contain lowercase alpha-numeric characters
- *   and underscores and should be prefixed with the providing module name.
- *   Possible attributes for each sub-array are:
- *   - label: The label of the resource. Start capitalized.
- *   - class: The name of the controller class for the resource. The class has
- *     to implement the RestWSResourceControllerInterface. Required.
- *   - menu_path: A relative path were the resource callback should lie. By
- *     default the resource name will be used as menu path. Optional.
- *
  * @see MyModuleBookResourceController
  */
 function hook_restws_resource_info() {
@@ -54,13 +32,7 @@ function hook_restws_resource_info() {
 }
 
 /**
- * Alter available resource information.
- *
  * @param array $resource_info
- *   Resource information as defined in hook_restws_resource_info(). You can
- *   move the path of a resouce by setting menu_info. In this example you'll
- *   have to retrieve nodes from /mypath.json or /mypath/1.json.
- *
  * @see hook_restws_resource_info()
  */
 function hook_restws_resource_info_alter(&$resource_info) {
@@ -69,21 +41,7 @@ function hook_restws_resource_info_alter(&$resource_info) {
 }
 
 /**
- * Define restws compatible formats.
- *
- * This hook is required in order to add new restws formats.
- *
  * @return array
- *   An array of information about the module's provided formats.
- *   The array contains a sub-array for each format, with the format name as
- *   the key. Format names may only contain lowercase alpha-numeric characters
- *   and underscores.
- *   Possible attributes for each sub-array are:
- *   - label: The label of the format. Start capitalized.
- *   - class: The name of the class for the format. The class has to implement
- *     the RestWSFormatInterface. Required.
- *   - mime type: The official internet media type (MIME type) of the format.
- *     Required.
  */
 function hook_restws_format_info() {
   return array(
@@ -101,11 +59,7 @@ function hook_restws_format_info() {
 }
 
 /**
- * Alter available format information.
- *
  * @param array $format_info
- *   Format information as defined in hook_restws_format_info()
- *
  * @see hook_restws_format_info()
  */
 function hook_restws_format_info_alter(&$format_info) {
@@ -113,15 +67,7 @@ function hook_restws_format_info_alter(&$format_info) {
 }
 
 /**
- * Alter the incoming request array.
- *
  * @param array $request
- *   A request array that contains the following items:
- *   - op: operation string, one of create, read, update or delete.
- *   - format: object implementing RestWSFormatInterface.
- *   - resource: object implementing RestWSResourceControllerInterface.
- *   - id: resource identifier or NULL for the create operation.
- *   - payload: array containing data attached to this request, if any.
  */
 function hook_restws_request_alter(array &$request) {
   if ($request['resource']->resource() == 'node') {
@@ -130,16 +76,10 @@ function hook_restws_request_alter(array &$request) {
 }
 
 /**
- * Alter the outgoing response.
- *
  * @param mixed $response
- *   The response data being returned by the REST service (not yet serialized).
  * @param string $function
- *   The function being called on the REST service.
  * @param string $format
- *   The name of the format serializing the response.
  * @param RestWSResourceControllerInterface $resourceController
- *   The resource controller.
  */
 function hook_restws_response_alter(&$response, $function, $formatName, $resourceController) {
   if ($function == 'viewResource' && $formatName == 'json') {
@@ -148,10 +88,7 @@ function hook_restws_response_alter(&$response, $function, $formatName, $resourc
 }
 
 /**
- * Alter the list of allowed meta controls.
- *
  * @param array $controls
- *   A list of allowed meta controlers
  */
 function hook_restws_meta_controls_alter(&$controls) {
   $controls['deep-load-refs'] = 'deep-load-refs';
@@ -162,7 +99,7 @@ function hook_restws_meta_controls_alter(&$controls) {
  */
 
 /**
- * Example controller class for the mymodule_book resource.
+ * ontroller class mymodule_book.
  */
 class MyModuleBookResourceController implements RestWSResourceControllerInterface {
 

@@ -4,7 +4,7 @@ package = Testing
 core = 7.x
 hidden = TRUE
 
-; Information added by Drupal.org packaging script on 2016-03-30
+; Infor
 version = "7.x-2.5"
 core = "7.x"
 project = "restws"

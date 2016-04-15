@@ -2,7 +2,6 @@
 
 /**
  * @file
- * Install, update, and uninstall functions for the RESTful module.
  */
 
 /**
@@ -13,7 +12,6 @@ function restful_schema() {
 
   $schema['cache_restful'] = drupal_get_schema_unprocessed('system', 'cache');
 
-  // Rate limit entity base table.
   $schema['restful_rate_limit'] = array(
     'description' => 'Rate limit base table',
     'fields' => array(
@@ -65,7 +63,6 @@ function restful_schema() {
     'primary key' => array('rlid'),
   );
 
-  // Cache fragment entity base table.
   $schema['restful_cache_fragment'] = array(
     'description' => 'Cache fragment base table',
     'fields' => array(
@@ -147,7 +144,5 @@ function restful_update_7200() {
  * Clear RESTful cache on cache flush.
  */
 function restful_update_7201() {
-  // Even if the recommended value is FALSE, there might be some deploy
-  // workflows that assume cache clearing.
   variable_set('restful_clear_on_cc_all', TRUE);
 }

@@ -23,7 +23,6 @@ function restful_admin_settings($form_state) {
   foreach ($formatter_manager->getDefinitions() as $plugin_name => $plugin) {
     $element['#options'][$plugin_name] = check_plain($plugin['label']);
 
-    // Add description for each formatter.
     if (!$plugin['description']) {
       continue;
     }

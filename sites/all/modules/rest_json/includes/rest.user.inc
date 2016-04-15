@@ -2,17 +2,14 @@
 
 /**
  * Does user login.
- *
  * Endpoint: /<rest_prefix>/user/login
  */
 function page_rest_json_user_login($username=NULL, $password=NULL) {
 	global $rest_conf;
 	
-	// Check params
 	if (!$username) $username = request_param('username', PARAM_REQUIRED);
 	if (!$password) $password = request_param('password', PARAM_REQUIRED);
 	
-	// Allow login by mail
 	$username = db_select('users')
 		->fields('users', array('name'))
 		->condition(db_or()
@@ -21,9 +18,7 @@ function page_rest_json_user_login($username=NULL, $password=NULL) {
 		->execute()
 		->fetchField();
 	
-	// Check auth
 	if ($uid = user_authenticate($username, $password)) {
-		// Drupal login
 		global $user;
 		$user = user_load($uid);
 		$login_array = array ('name' => $username);
@@ -31,7 +26,6 @@ function page_rest_json_user_login($username=NULL, $password=NULL) {
 		
 		$account = rest_json_user($user);
 		
-		// Let other modules attach more content
 		drupal_alter('rest_json_user', $account);
 		
 		rest_json_response(TRUE, 'user', $account);
@@ -47,10 +41,8 @@ function page_rest_json_user_login($username=NULL, $password=NULL) {
 function page_rest_json_user_logout() {
 	global $user;
 	
-	// Check if user is logged
 	check_user_auth();
 	
-	// FIXME: Drupal logout redirects to the home page, we don't want this!
 #	module_load_include('pages.inc', 'user');
 #	user_logout();
 	watchdog('user', 'Session closed for %name.', array('%name' => $user->name));
@@ -90,7 +82,6 @@ function page_rest_json_user_auth() {
 	if ($uid = rest_json_uid()) {
 		$account = rest_json_user(user_load($uid));
 		
-		// Let other modules attach more content
 		drupal_alter('rest_json_user', $account);
 		
 		rest_json_response(TRUE, 'user', $account);
@@ -108,7 +99,6 @@ function page_rest_json_user_auth() {
 function page_rest_json_user_password($action) {
 	include_once DRUPAL_ROOT . '/includes/password.inc';
 	
-	// Change password
 	if ($action == 'change') {
 		// Check params
 		$username = request_param('username', PARAM_REQUIRED);
@@ -127,12 +117,9 @@ function page_rest_json_user_password($action) {
 		else rest_json_response(FALSE, 'user', NULL, 'Wrong old password');
 	}
 	
-	// Reset password
 	elseif ($action == 'reset') {
-		// Check params
 		$username = request_param('username', PARAM_REQUIRED);
 		
-		// Load user
 		$uid = db_select('users')
 			->fields('users', array('uid'))
 			->condition(db_or()
@@ -162,14 +149,12 @@ function page_rest_json_user_register() {
 	
 	include_once DRUPAL_ROOT . '/includes/password.inc';
 	
-	// Check params
 	$username = request_param('username', PARAM_REQUIRED);
 	$mail = request_param('mail', PARAM_REQUIRED);
 	$password = request_param('password', PARAM_REQUIRED);
 	if (!valid_email_address($mail)) rest_json_response(FALSE, 'parameter', NULL, 'Missing or invalid mail');
 	$userlang = request_param('language');
 	
-	// Check if user exists
 	$uid = db_select('users')
 		->fields('users', array('uid'))
 		->condition(db_or()
@@ -179,7 +164,6 @@ function page_rest_json_user_register() {
 		->fetchField();
 	if ($uid) rest_json_response(FALSE, 'user', NULL, 'Username or mail already registered');
 	
-	// Create user
 	$user = entity_create('user', array());
 	$user->name = $username;
 	$user->status = 1;
@@ -188,7 +172,6 @@ function page_rest_json_user_register() {
 	$user->pass = user_hash_password($password);
 	$user->language = $userlang ? $userlang : $language->language;
 	
-	// Save user
 	$userw = entity_metadata_wrapper('user', $user);
 	$userw->save();
 	

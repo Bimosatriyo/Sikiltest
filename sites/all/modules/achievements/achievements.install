@@ -2,7 +2,6 @@
 
 /**
  * @file
- * Install, update, and uninstall functions for the Achievements module.
  */
 
 /**
@@ -54,9 +53,6 @@ function achievements_schema() {
     'primary key'       => array('uid'),
   );
 
-  // this table not only defines what user has unlocked an achievement, but
-  // also the rank for each particular unlock. since these ranks never
-  // change, the rank is stored right in the table at unlock time.
   $schema['achievement_unlocks'] = array(
     'description' => 'Maps users to the achievements they have unlocked.',
     'fields' => array(
@@ -101,8 +97,6 @@ function achievements_schema() {
     'primary key'       => array('achievement_id', 'uid'),
   );
 
-  // some achievements only trigger over time e.g. after 10 comments, after 50
-  // Mondays, etc. this is a simple table for storage of these statistics.
   $schema['achievement_storage'] = array(
     'description' => 'Provides a general storage area for statistic collection.',
     'fields' => array(
@@ -179,8 +173,8 @@ function achievements_update_7101() {
   ));
 
   $achievers = db_select('achievement_totals', 'at')->fields('at', array('uid', 'timestamp'))->execute()->fetchAllAssoc('uid');
-  foreach ($achievers as $achiever) { // pre-fill all the current achievers with their latest unlock.
-    $achievement_id = db_select('achievement_unlocks', 'au')->fields('au', array('achievement_id')) // MINE MINE MINE.
+  foreach ($achievers as $achiever) { 
+    $achievement_id = db_select('achievement_unlocks', 'au')->fields('au', array('achievement_id')) 
       ->condition('uid', $achiever->uid)->condition('timestamp', $achiever->timestamp)->range(0, 1)->execute()->fetchField();
     db_update('achievement_totals')->fields(array('achievement_id' => $achievement_id))->condition('uid', $achiever->uid)->execute();
   }
@@ -198,7 +192,7 @@ function achievements_update_7102() {
     variable_set('achievements_image_secret', variable_get('achievements_image_hidden'));
   }
 
-  variable_del('achievements_image_hidden'); // Send a warning to the administrator just in case they haven't seen the CHANGELOG.
+  variable_del('achievements_image_hidden');
   drupal_set_message(t('"hidden" achievements MUST be retyped to "secret" else they will be exposed. See CHANGELOG.txt for more information.'), 'warning');
 }
 

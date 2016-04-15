@@ -2,7 +2,6 @@
 
 /**
  * @file
- * RESTful web services tests.
  */
 
 class RestWSTestCase extends DrupalWebTestCase {
@@ -23,7 +22,6 @@ class RestWSTestCase extends DrupalWebTestCase {
    * CRUD tests for nodes.
    */
   public function testCRUD() {
-    // Test Read.
     $title = $this->randomName(8);
     $node = $this->drupalCreateNode(array('title' => $title));
     $account = $this->drupalCreateUser(array('access resource node'));
@@ -34,7 +32,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertResponse('200', 'HTTP response code is correct.');
     $this->assertEqual(curl_getinfo($this->curlHandle, CURLINFO_CONTENT_TYPE), 'application/json', 'HTTP content type is correct.');
 
-    // Test Create.
     $account = $this->drupalCreateUser(array('access content',
       'bypass node access', 'access resource node'));
     $title = $this->randomName(8);
@@ -53,19 +50,15 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertResponse('201', 'HTTP response code is correct.');
     $this->assertEqual(curl_getinfo($this->curlHandle, CURLINFO_CONTENT_TYPE), 'application/json', 'HTTP content type is correct.');
 
-    // Test Update.
     $new_title = $this->randomName(8);
     $json = drupal_json_encode(array('title' => $new_title));
     $this->httpRequest('node/' . $node->nid, 'PUT', $account, $json);
-    // Clear the static cache, otherwise we won't see the update.
     $node = node_load($node->nid, NULL, TRUE);
     $this->assertEqual($new_title, $node->title, 'Node title in DB is equal to the updated title.');
     $this->assertResponse('200', 'HTTP response code is correct.');
     $this->assertEqual(curl_getinfo($this->curlHandle, CURLINFO_CONTENT_TYPE), 'application/json', 'HTTP content type is correct.');
 
-    // Test delete.
     $this->httpRequest('node/' . $node->nid, 'DELETE', $account);
-    // Clear the static cache, otherwise we won't see the update.
     $node = node_load($node->nid, NULL, TRUE);
     $this->assertFalse($node, 'Node is not in the DB anymore.');
     $this->assertResponse('200', 'HTTP response code is correct.');
@@ -76,7 +69,6 @@ class RestWSTestCase extends DrupalWebTestCase {
    * Tests bad requests.
    */
   public function testBadRequests() {
-    // Assure that nodes without types won't be created.
     $account = $this->drupalCreateUser(array('access content', 'bypass node access', 'access resource node', 'administer users'));
     $title = $this->randomName(8);
     $new_node = array(
@@ -96,11 +88,8 @@ class RestWSTestCase extends DrupalWebTestCase {
    */
   public function testBadInputFormat() {
     module_enable(array('php'));
-    // Reset the cache of valid permissions so that the PHP code format
-    // permission exists.
     $this->checkPermissions(array(), TRUE);
 
-    // Assure that users can't create nodes with unauthorized input formats.
     $unprivileged_account = $this->drupalCreateUser(array('bypass node access', 'access resource node'));
     $title = $this->randomName(8);
     $new_node = array(
@@ -118,7 +107,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $node = entity_load('node', FALSE, array('title' => $title));
     $this->assertEqual(count($node), 0, "Node with unauthorized input format wasn't created");
 
-    // Check that the format is allowed if the permission is present.
     $privileged_account = $this->drupalCreateUser(array('bypass node access', 'access resource node', 'use text format php_code'));
     $this->httpRequest('node', 'POST', $privileged_account, $json);
     $this->assertResponse('201');
@@ -129,7 +117,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertEqual($node->body[LANGUAGE_NONE][0]['value'], $new_node['body']['value'], 'The new node body has the correct value');
     $this->assertEqual($node->body[LANGUAGE_NONE][0]['format'], 'php_code', 'The new node has the correct format');
 
-    // Check that users can't update nodes with unauthorized input formats.
     $node->body[LANGUAGE_NONE][0]['format'] = 'filtered_html';
     node_save($node);
 
@@ -148,7 +135,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertNotEqual($node->body[LANGUAGE_NONE][0]['value'], $new_body);
     $this->assertEqual($node->body[LANGUAGE_NONE][0]['format'], 'filtered_html');
 
-    // Check that the format is allowed if the permission is present.
     $this->httpRequest('node/1', 'PUT', $privileged_account, $json);
     $this->assertResponse('200');
     $node = node_load(1, NULL, TRUE);
@@ -157,14 +143,11 @@ class RestWSTestCase extends DrupalWebTestCase {
   }
 
   /**
-   * Test field level access restrictions.
-   *
    * @see restws_test_field_access()
    */
   public function testFieldAccess() {
     module_enable(array('restws_test'));
 
-    // Add text field to nodes.
     $field_info = array(
       'field_name' => 'field_text',
       'type' => 'text',
@@ -182,8 +165,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     );
     field_create_instance($instance);
 
-    // A user without the "administer users" permission should not be able to
-    // create a node with the access protected field.
     $unprivileged_account = $this->drupalCreateUser(array('bypass node access', 'access resource node'));
     $title = $this->randomName(8);
     $new_node = array(
@@ -197,15 +178,12 @@ class RestWSTestCase extends DrupalWebTestCase {
     $nodes = entity_load('node', FALSE, array('title' => $title));
     $this->assertEqual(count($nodes), 0, "Node with access protected field wasn't created");
 
-    // Test again with the additional permission, this should work now.
     $privileged_account = $this->drupalCreateUser(array('bypass node access', 'access resource node', 'administer users'));
     $this->httpRequest('node', 'POST', $privileged_account, $json);
     $this->assertResponse('201');
     $node = node_load(1, NULL, TRUE);
     $this->assertEqual($node->field_text[LANGUAGE_NONE][0]['value'], 'test');
 
-    // Update test: unpriviledged users should not be able to change the
-    // protected field.
     $update = array('field_text' => 'newvalue');
     $json = drupal_json_encode($update);
     $result = $this->httpRequest('node/1', 'PUT', $unprivileged_account, $json);
@@ -214,7 +192,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $node = node_load(1, NULL, TRUE);
     $this->assertEqual($node->field_text[LANGUAGE_NONE][0]['value'], 'test');
 
-    // Check that the update is allowed if the permission is present.
     $this->httpRequest('node/1', 'PUT', $privileged_account, $json);
     $this->assertResponse('200');
     $node = node_load(1, NULL, TRUE);
@@ -232,7 +209,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->createTerm("foo");
     $this->createTerm("bar");
 
-    // Test json create.
     $title = $this->randomName(8);
     $new_node = array(
       'body' => array(LANGUAGE_NONE => array(array())),
@@ -257,7 +233,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertEqual($node->field_tags[LANGUAGE_NONE][0]['tid'], 2, 'Taxonomy term 1 was correctly added.');
     $this->assertEqual($node->field_tags[LANGUAGE_NONE][1]['tid'], 1, 'Taxonomy term 2 was correctly added.');
 
-    // Test XML update.
     $xml = '
       <node>
         <title>bar</title>
@@ -273,7 +248,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertEqual($node->field_tags[LANGUAGE_NONE][0]['tid'], 1, 'Taxonomy term 1 was correctly updated.');
     $this->assertEqual($node->field_tags[LANGUAGE_NONE][1]['tid'], 2, 'Taxonomy term 2 was correctly updated.');
 
-    // Test XML create.
     $result = $this->httpRequest('node', 'POST', $account, $xml, 'xml');
     $xml_element = simplexml_load_string($result);
     $nid = $xml_element->attributes()->id;
@@ -286,7 +260,6 @@ class RestWSTestCase extends DrupalWebTestCase {
    * Tests using the xml formatter.
    */
   public function testXmlFormatter() {
-    // Test Read.
     $account = $this->drupalCreateUser(array('access content',
       'bypass node access', 'access resource node')
     );
@@ -297,10 +270,8 @@ class RestWSTestCase extends DrupalWebTestCase {
     $result = $this->drupalGet("node/$node->nid", array(), array('Accept: application/xml'));
     $this->assertRaw("<title>$title</title>", 'XML has been generated.');
 
-    // Test update.
     $new_title = 'foo';
     $result = $this->httpRequest('node/' . $node->nid, 'PUT', $account, "<node><title>$new_title</title></node>", 'xml');
-    // Clear the static cache, otherwise we won't see the update.
     $node = node_load($node->nid, NULL, TRUE);
     $this->assertEqual($new_title, $node->title, 'Node title in DB is equal to the updated title.');
     $this->assertResponse('200', 'HTTP response code is correct.');
@@ -311,12 +282,10 @@ class RestWSTestCase extends DrupalWebTestCase {
    * Test requests to non-existing resources and other errors.
    */
   public function testErrors() {
-    // Read non-existing resource.
     $random_nid = rand(1, 1000);
     $result = $this->httpRequest('node/' . $random_nid, 'GET');
     $this->assertResponse('404', 'HTTP response code is correct.');
 
-    // Update a node with an unknown property.
     $account = $this->drupalCreateUser(array('access content',
       'bypass node access', 'access resource node')
     );
@@ -327,7 +296,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertEqual($result, "406 Not Acceptable: Unknown data property $property_name.", 'Response body is correct');
     $this->assertResponse('406', 'HTTP response code is correct.');
 
-    // Create a node with an unknown property.
     $title = $this->randomName(8);
     $new_node = array(
       'body'      => array(LANGUAGE_NONE => array(array())),
@@ -342,7 +310,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertResponse('406', 'HTTP response code is correct.');
 
 
-    // Simulate a CSRF attack without the required token.
     $new_title = 'HACKED!';
     $json = drupal_json_encode(array('title' => $new_title));
     $this->curlExec(array(
@@ -355,22 +322,14 @@ class RestWSTestCase extends DrupalWebTestCase {
       CURLOPT_HTTPHEADER => array('Content-Type: application/json'),
     ));
     $this->assertResponse(403);
-    // Clear the static cache, otherwise we won't see the update.
     $node = node_load($node->nid, NULL, TRUE);
     $this->assertNotEqual($node->title, $new_title, 'Node title was not updated in the database.');
 
-    // Simulate a cache poisoning attack where JSON could get into the page
-    // cache.
-    // Grant node resource access to anonymous users.
     user_role_grant_permissions(DRUPAL_ANONYMOUS_RID, array('access resource node'));
-    // Enable page caching.
     variable_set('cache', 1);
-    // Reset cURL here to delete any stored request settings.
     unset($this->curlHandle);
-    // Request the JSON representation of the node.
     $this->drupalGet("node/$node->nid", array(), array('Accept: application/json'));
     $this->assertUrl("node/$node->nid.json", array(), 'Requesting a resource with JSON Accept header redirects to the .json URL.');
-    // Now request the HTML representation.
     $result = $this->drupalGet("node/$node->nid");
     $content_type = $this->drupalGetHeader('content-type');
     $this->assertNotEqual($content_type, 'application/json', 'Content type header is not JSON after requesting HTML.');
@@ -394,23 +353,19 @@ class RestWSTestCase extends DrupalWebTestCase {
         'title' => $title,
         'type' => 'article',
       );
-      // Add tags to the nodes 0 and 3.
       if ($i % 3 == 0) {
         $node['field_tags'][LANGUAGE_NONE][]['tid'] = 1;
       }
 
-      // Set a body and the format to full_html for nodes 0 and 4.
       if ($i % 4 == 0) {
         $node['body'] = array(LANGUAGE_NONE => array(array('value' => l('foo', 'node'), 'format' => 'full_html')));
       }
       $nodes[$i] = $this->drupalCreateNode($node);
     }
 
-    // Retrieve a list of nodes with json sorted by the title descending.
     $result = $this->httpRequest('node.json', 'GET', $account, array('sort' => 'title', 'direction' => 'DESC'));
     $result_nodes = drupal_json_decode($result);
 
-    // Start by checking if the last node created is the first in the result.
     $i = 4;
     foreach ($result_nodes['list'] as $key => $node) {
       $this->assertEqual($nodes[$i]->title, $node['title'], "Node title $key was received correctly.");
@@ -419,19 +374,16 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertResponse('200', 'HTTP response code is correct.');
     $this->assertEqual(curl_getinfo($this->curlHandle, CURLINFO_CONTENT_TYPE), 'application/json', 'HTTP content type is correct.');
 
-    // Retrieve a list of nodes with xml.
     $result = $this->drupalGet('node', array(), array('Accept: application/xml'));
     $this->assertRaw('<list>', 'XML has been generated.');
     for ($i = 0; $i < 5; $i++) {
       $this->assertRaw("<title>node$i</title>", 'XML has been generated.');
     }
 
-    // Query for a node with the title 'title1'.
     $result = $this->httpRequest('node.json', 'GET', $account, array('title' => 'node1'));
     $node = drupal_json_decode($result);
     $this->assertEqual($node['list'][0]['title'], 'node1', 'Node title was received correctly.');
 
-    // Query for nodes with the taxonomy term foo which has the tid 1.
     $result = $this->httpRequest('node.json', 'GET', $account, array('field_tags' => '1'));
     $nodes = drupal_json_decode($result);
 
@@ -441,7 +393,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertEqual($nodes['list'][1]['title'], 'node3', 'Right node title was received.');
     $this->assertEqual($nodes['list'][1]['field_tags'][0]['id'], 1, 'Node has taxonomy term.');
 
-    // Test paging and limiting.
     $result = $this->httpRequest('node.json', 'GET', $account, array('limit' => 2, 'page' => 0));
     $result_nodes = drupal_json_decode($result);
 
@@ -462,7 +413,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $result = $this->httpRequest('node.json', 'GET', $account, array('limit' => 2, 'page' => 5));
     $this->assertResponse('404', 'HTTP response code is correct.');
 
-    // Test meta control full.
     $result = $this->httpRequest('node.json', 'GET', $account, array('full' => 0));
     $result_nodes = drupal_json_decode($result);
 
@@ -470,7 +420,6 @@ class RestWSTestCase extends DrupalWebTestCase {
       $this->assertTrue($node['uri'] == restws_resource_uri('node', $node['id']), 'Rerence to node ' . $node['id'] . ' was received correctly.');
     }
 
-    // Test field column queries.
     $result = $this->httpRequest('node.json', 'GET', $account, array('body[format]' => 'full_html'));
     $result_nodes = drupal_json_decode($result);
 
@@ -480,18 +429,15 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertEqual($result_nodes['list'][1]['title'], 'node4', 'Right node title was received.');
     $this->assertEqual($result_nodes['list'][1]['body']['format'], 'full_html', 'Node has body with full_html.');
 
-    // Test SQL injection via order direction.
     $this->httpRequest('node.json', 'GET', $account, array('sort' => 'title', 'direction' => 'ASC; DELETE FROM ' . $this->databasePrefix . 'node WHERE nid = 1; --'));
     $node = node_load(1, NULL, TRUE);
     $this->assertNotEqual($node, FALSE, 'Node has not been deleted through SQL injection.');
   }
 
   /**
-   * Test that sensitive user data is hidden for the "access user profiles"
-   * permission and unpublished nodes.
+   * Access user profiles
    */
   public function testPermissions() {
-    // Test other user with "access user profiles" permission.
     $test_user = $this->drupalCreateUser();
     $account = $this->drupalCreateUser(array('access resource user', 'access user profiles'));
     $result = $this->httpRequest('user/' . $test_user->uid . '.json', 'GET', $account);
@@ -502,7 +448,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertResponse('200', 'HTTP response code is correct.');
     $this->assertEqual(curl_getinfo($this->curlHandle, CURLINFO_CONTENT_TYPE), 'application/json', 'HTTP content type is correct.');
 
-    // Test the own user - access to sensitive information should be allowed.
     $result = $this->httpRequest('user/' . $account->uid . '.json', 'GET', $account);
     $user_array = drupal_json_decode($result);
     $this->assertEqual($account->name, $user_array['name'], 'User name was received correctly.');
@@ -512,7 +457,6 @@ class RestWSTestCase extends DrupalWebTestCase {
     $this->assertResponse('200', 'HTTP response code is correct.');
     $this->assertEqual(curl_getinfo($this->curlHandle, CURLINFO_CONTENT_TYPE), 'application/json', 'HTTP content type is correct.');
 
-    // Test node access with an unpublished node.
     $this->drupalCreateNode(array('title' => 'foo', 'status' => 0));
 
     $this->drupalLogout();
@@ -522,7 +466,6 @@ class RestWSTestCase extends DrupalWebTestCase {
 
     $result = $this->httpRequest('node.json', 'GET', $account);
     $nodes = drupal_json_decode($result);
-    // No node should be returned.
     $this->assertEqual(count($nodes['list']), 0, 'Unpublished node was successfully hidden.');
     $this->assertNoResponse(404, 'An empty collection should not cause a 404 response.');
   }
@@ -542,17 +485,14 @@ class RestWSTestCase extends DrupalWebTestCase {
     module_enable(array('restws_test'), TRUE);
 
     foreach (array('bar', 'foo/bar', 'foo/bar/node', 'api-v1.2', 'this/is/a/really/long/path') as $menu_path) {
-      // Register the menu_path for this test.
       variable_set('restws_test_menu_path', $menu_path);
       variable_set('menu_rebuild_needed', TRUE);
 
-      // Verify that the query uri is working.
       $result = $this->drupalGet($menu_path . '.json');
       $this->assertResponse(200);
       $result = drupal_json_decode($result);
       $this->assertEqual($result['list'][0]['title'], $title);
 
-      // Verify that the view uri is working.
       $result = $this->drupalGet($menu_path . '/1.json');
       $this->assertResponse(200);
       $result = drupal_json_decode($result);
@@ -571,10 +511,7 @@ class RestWSTestCase extends DrupalWebTestCase {
   }
 
   /**
-   * Helper function to issue a HTTP request with simpletest's cURL.
-   *
    * @param array $body
-   *   Either the body for POST and PUT or additional URL parameters for GET.
    */
   protected function httpRequest($url, $method, $account = NULL, $body = NULL, $format = 'json') {
     if (isset($account)) {
@@ -582,12 +519,10 @@ class RestWSTestCase extends DrupalWebTestCase {
       $this->drupalLogin($account);
     }
     if (in_array($method, array('POST', 'PUT', 'DELETE'))) {
-      // GET the CSRF token first for writing requests.
       $token = $this->drupalGet('restws/session/token');
     }
     switch ($method) {
       case 'GET':
-        // Set query if there are addition GET parameters.
         $options = isset($body) ? array('absolute' => TRUE, 'query' => $body) : array('absolute' => TRUE);
         $curl_options = array(
           CURLOPT_HTTPGET => TRUE,

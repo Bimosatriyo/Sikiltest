@@ -14,7 +14,7 @@ function achievements_settings() {
     '#title'              => t('Clear cache'),
   );
   $form['achievements_cache']['achievements_clear_info_cache'] = array(
-    '#type'               => 'submit', // just like performance cache clears.
+    '#type'               => 'submit',
     '#submit'             => array('achievements_clear_info_cache_submit'),
     '#value'              => t('Clear achievements information cache'),
   );
@@ -92,7 +92,7 @@ function achievements_settings() {
   $form['achievements_config']['achievements_unlocked_move_to_top'] = array(
     '#type'           => 'checkbox',
     '#title'          => t("Move the user's unlocked achievements to the top of their achievement page."),
-    '#default_value'  => variable_get('achievements_unlocked_move_to_top', TRUE), // default to gamer-style.
+    '#default_value'  => variable_get('achievements_unlocked_move_to_top', TRUE),
   );
 
   return system_settings_form($form);
@@ -110,17 +110,16 @@ function achievements_clear_info_cache_submit() {
  * Submit callback; give or take away an achievement from a user.
  */
 function achievements_manual_submit($form, &$form_state) {
-  if (empty($form_state['values']['achievements_manual_user'])) { // ZOMG, it's #required, fool!
+  if (empty($form_state['values']['achievements_manual_user'])) { 
     drupal_set_message(t('A username or user ID is required to give or take achievements.'), 'error');
     return;
   }
 
-  if (empty($form_state['values']['achievements_manual_achievement'])) { // HITCHCOCK STABBY STAB.
+  if (empty($form_state['values']['achievements_manual_achievement'])) { 
     drupal_set_message(t('An achievement ID is required to give or take achievements.'), 'error');
     return;
   }
 
-  // well, we've got form values, so load 'em in and check for validity.
   $account = !is_numeric($form_state['values']['achievements_manual_user'])
     ? user_load_by_name($form_state['values']['achievements_manual_user'])
     : user_load($form_state['values']['achievements_manual_user']);
@@ -132,13 +131,12 @@ function achievements_manual_submit($form, &$form_state) {
     return;
   }
 
-  if (!isset($achievement['title'])) { // -100 DKP! That's not even funny anymore.
-    drupal_set_message(t('%achievement_id is not a valid achievement.', // M... many whelps?
+  if (!isset($achievement['title'])) { 
+    drupal_set_message(t('%achievement_id is not a valid achievement.', 
       array('%achievement_id' => $form_state['values']['achievements_manual_achievement'])), 'error');
     return;
   }
 
-  // if we've a valid user and achievement ID, give 'em the achievement, ya freeloaders.
   if ($account && $achievement && $form_state['clicked_button']['#achievement_action'] == 'give') {
     if (!user_access('earn achievements', $account)) { // KLAXON KLAXON CHEATAH.
       drupal_set_message(t('%username does not have permission to earn achievements.',
@@ -147,21 +145,20 @@ function achievements_manual_submit($form, &$form_state) {
     }
 
     achievements_unlocked($achievement['id'], $account->uid);
-    drupal_set_message(t('%username has been given %achievement.', // yeah, yeah.
+    drupal_set_message(t('%username has been given %achievement.',
       array('%username' => format_username($account), '%achievement' => $achievement['title'])));
     return;
   }
 
-  // if we're taking away an achievement, first check if they have it.
   if ($form_state['clicked_button']['#achievement_action'] == 'take') {
     if (!achievements_unlocked_already($achievement['id'], $account->uid)) {
-      drupal_set_message(t('%username has not unlocked %achievement.', // palm to forehead.
+      drupal_set_message(t('%username has not unlocked %achievement.',
         array('%username' => format_username($account), '%achievement' => $achievement['title'])), 'error');
       return;
     }
 
     achievements_locked($achievement['id'], $account->uid);
-    drupal_set_message(t('%username has had %achievement taken away.', // nope, nope.
+    drupal_set_message(t('%username has had %achievement taken away.',
       array('%username' => format_username($account), '%achievement' => $achievement['title'])));
     return;
   }

@@ -2,7 +2,6 @@
 
 /**
  * @file
- * Install file for jQuery Update.
  */
 
 /**
@@ -44,6 +43,5 @@ function jquery_update_update_7000() {
   }
   variable_del('jquery_update_replace');
 
-  // Restore the default version of jQuery.
   variable_del('jquery_update_jquery_version');
 }

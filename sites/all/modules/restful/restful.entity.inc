@@ -2,7 +2,6 @@
 
 /**
  * @file
- * Contains entity related code.
  */
 
 use Drupal\restful\Plugin\resource\Decorators\CacheDecoratedResource;
@@ -160,7 +159,6 @@ function _restful_entity_clear_all_resources($cid) {
   if (!$handler instanceof CacheDecoratedResourceInterface) {
     return;
   }
-  // Clear the cache bin.
   $handler->getCacheController()->clear($cid);
 }
 
@@ -183,10 +181,7 @@ function restful_entity_clear_render_cache() {
       if (!$handler->hasSimpleInvalidation()) {
         continue;
       }
-      // You can get away without the fragments for a clear.
       $cache_object = new RenderCache(new ArrayCollection(), $hash, $handler->getCacheController());
-      // Do a clear with the RenderCache object to also remove the cache
-      // fragment entities.
       $cache_object->clear();
     }
   }

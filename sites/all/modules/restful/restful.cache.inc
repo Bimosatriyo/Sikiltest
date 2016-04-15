@@ -2,7 +2,6 @@
 
 /**
  * @file
- * Procedural implementations for cache related features.
  */
 use Drupal\restful\RenderCache\RenderCache;
 
@@ -24,7 +23,6 @@ function restful_flush_caches() {
   if (!variable_get('restful_clear_on_cc_all', FALSE)) {
     return array();
   }
-  // Delete all the cache fragments.
   /* @var \Drupal\restful\RenderCache\Entity\CacheFragmentController $controller */
   $controller = entity_get_controller('cache_fragment');
   $controller->wipe();
